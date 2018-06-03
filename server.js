@@ -26,11 +26,10 @@ Date.prototype.addDays = function(days) {
 }
 
 Date.prototype.format = function() {
-  return (this.getFullYear() + '-' + this.getMonth() + '-' + this.getDate())
+  return (this.getFullYear() + '-' + (this.getMonth() + 1) + '-' + this.getDate())
 }
 
-let date = new Date(),
-    dateFuture = date.addDays(60)
+let date = new Date()
 
 
 function handleErrors(response) {
@@ -81,7 +80,8 @@ app.get('/callback', function(req, res) {
 app.get('/seriescalendar', function(req, res) {
   let calendar = [],
       apikey = process.env.SONARR_API_KEY,
-      fetchUrl = 'http://sonarr.gladosplex.nl/api/calendar?apikey=' + apikey  + '&start=' + date.format() + '&end=' + date.addDays(3).format()
+      fetchUrl = 'http://sonarr.gladosplex.nl/api/calendar?apikey=' + apikey  + '&start=' + date.format() + '&end=' + date.addDays(7).format()
+      console.log(fetchUrl)
 
   function getSonarrCalendar(apikey) {
     fetch(fetchUrl,
@@ -118,7 +118,7 @@ app.get('/moviecalendar', function(req, res) {
       apikey = process.env.RADARR_API_KEY
 
   function getRadarrCalendar(apikey) {
-    fetch('http://radarr.gladosplex.nl/api/calendar?apikey=' + apikey + '&start=' + date.format() + '&end=' + date.addDays(60).format(),
+    fetch('http://radarr.gladosplex.nl/api/calendar?apikey=' + apikey + '&start=' + date.format() + '&end=' + date.addDays(120).format(),
     {
       method: 'GET',
       headers: {
@@ -149,4 +149,6 @@ app.get('/moviecalendar', function(req, res) {
 
 let port = process.env.PORT || 8888
 console.log(`Listening on port ${port}.`)
+console.log(date)
+console.log(date.format())
 app.listen(port)
