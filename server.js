@@ -39,6 +39,20 @@ function handleErrors(response) {
   return response;
 }
 
+let tmdbImage = (tmdbId) => {
+  let apikey = process.env.TMDB_API_KEY,
+      fetchUrl = 'https://api.themoviedb.org/3/movie/' + tmdbId + '/images?api_key=' + apikey
+
+  return fetch(fetchUrl, {
+    method: 'GET'
+  })
+  .then(response => response.json())
+  .then(tmdbImages => {
+    return ("http://image.tmdb.org/t/p/w342" + tmdbImages.posters[0].file_path)
+  })
+  .catch(err => console.log(err))
+}
+
 let redirect_uri =
   process.env.REDIRECT_URI ||
   'http://localhost:8888/callback'
@@ -81,7 +95,6 @@ app.get('/seriescalendar', function(req, res) {
   let calendar = [],
       apikey = process.env.SONARR_API_KEY,
       fetchUrl = 'http://sonarr.gladosplex.nl/api/calendar?apikey=' + apikey  + '&start=' + date.format() + '&end=' + date.addDays(7).format()
-      console.log(fetchUrl)
 
   function getSonarrCalendar(apikey) {
     fetch(fetchUrl,
@@ -93,7 +106,6 @@ app.get('/seriescalendar', function(req, res) {
     })
     .then(responseClone => responseClone.json())
     .then(sonarrCalendarPromise => {
-        console.log("Calling up Sonarr to check schedule")
 
         sonarrCalendarPromise = sonarrCalendarPromise || []
 
@@ -103,8 +115,6 @@ app.get('/seriescalendar', function(req, res) {
 
         res.contentType('application/json')
         res.json(calendar)
-
-        console.log("Got a schedule from Sonarr, we can probably figure this out")
       }
     )
     .catch(error => console.log(error))
@@ -125,20 +135,25 @@ app.get('/moviecalendar', function(req, res) {
         Accept: 'application/json'
       }
     })
-    .then(responseClone => responseClone.json())
-    .then(radarrCalendarPromise => {
-        console.log("Calling up Radarr to check schedule")
+    .then(response => response.json())
+    .then(radarrCalendar => {
+        radarrCalendar = radarrCalendar.slice(0,7) || []
 
-        radarrCalendarPromise = radarrCalendarPromise || []
-
-        radarrCalendarPromise.forEach(item => {
-          calendar.push(item)
+        let calendar = Promise.all(radarrCalendar.map(movie => {
+          return tmdbImage(movie.tmdbId)
+          .then(imageUrl => {
+            let movieObj = Object.assign({}, movie)
+            movieObj.tmdbPoster = imageUrl
+            return movieObj
+          })
+        }))
+        .then(result => {
+          res.contentType('application/json')
+          res.json(result)
         })
-
-        res.contentType('application/json')
-        res.json(calendar)
-
-        console.log("Got a schedule from Radarr, we can probably figure this out")
+        .catch(err => {
+          console.log(err)
+        })
       }
     )
     .catch(error => console.log(error))
@@ -149,6 +164,4 @@ app.get('/moviecalendar', function(req, res) {
 
 let port = process.env.PORT || 8888
 console.log(`Listening on port ${port}.`)
-console.log(date)
-console.log(date.format())
 app.listen(port)
